@@ -26,19 +26,63 @@ class Promise {
     }
   }
 
-  then(onFulfilled, onRejected){
+  then(onFulfilled, onRejected) {
+    return new Promise((resolve, reject) => {
+        if (this.status === "pending") {
+            this.onFulfilledCallbacks.push(() => {
+                try {
+                    const fulfilledFromLastPromise = onFulfilled(this.value);
+                    if (fulfilledFromLastPromise instanceof Promise) {
+                        fulfilledFromLastPromise.then(resolve, reject);
+                    } else {
+                        resolve(fulfilledFromLastPromise);
+                    }
+                } catch (err) {
+                    reject(err);
+                }
+            });
+            this.onRejectedCallbacks.push(() => {
+                try {
+                    const rejectedFromLastPromise = onRejected(this.value);
+                    if (rejectedFromLastPromise instanceof Promise) {
+                        rejectedFromLastPromise.then(resolve, reject);
+                    } else {
+                        reject(rejectedFromLastPromise);
+                    }
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        }
 
-    if(this.status === 'pending'){
-      this.onFulfilledCallbacks.push(onFulfilled);
-      this.onRejectedCallbacks.push(onRejected);
-    }
+        if (this.status === "fulfilled") {
+            try {
+                const fulfilledFromLastPromise = onFulfilled(this.value);
+                if (fulfilledFromLastPromise instanceof Promise) {
+                    fulfilledFromLastPromise.then(resolve, reject);
+                } else {
+                    resolve(fulfilledFromLastPromise);
+                }
+            } catch (err) {
+                reject(err);
+            }
 
-    if(this.status === 'fulfilled'){
-      onFulfilled(this.value)
-    } else if (this.status === 'rejected'){
-      onRejected(this.value)
-    }
-  }
+        }
+
+        if (this.status === "rejected") {
+            try {
+                const rejectedFromLastPromise = onRejected(this.value);
+                if (rejectedFromLastPromise instanceof Promise) {
+                    rejectedFromLastPromise.then(resolve, reject);
+                } else {
+                    reject(rejectedFromLastPromise);
+                }
+            } catch (err) {
+                reject(err);
+            }
+        }
+    });
+}
 
 }
 
@@ -58,3 +102,12 @@ p1.then((res) => console.log(res), (err) => console.log(err));
 p2.then((res) => console.log(res), (err) => console.log(err));
 
 p3.then((res) => console.log(res), (err) => console.log(err));
+
+p3.then((res) => {
+  console.log(res);
+  return new Promise(resolve => {
+      setTimeout(() => resolve('resolved second one'), 1000);
+  });
+}).then(res => {
+  console.log(res);
+});
